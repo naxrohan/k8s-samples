@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: mysqldb-adminer
+    labels:
+        app: mysqldb-adminer
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+          app: mysqldb-adminer
+    template:
+      metadata:
+        labels:
+          app: mysqldb-adminer
+      spec:
+        containers:
+        - name: mysqldb-adminer
+          image: adminer
+          ports:
+          - containerPort: 8080
+          env:
+            # - name: ADMINER_DESIGN
+              # value: "pappu687"
+              # value: "galkaev"
+            - name: ADMINER_DEFAULT_SERVER
+              valueFrom:
+                configMapKeyRef:
+                  name: mysqldb-configmap
+                  key: connection_string
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysqldb-adminer-service
+spec:
+  selector:
+    app: mysqldb-adminer
+  # type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      # nodePort: 30000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mysqldb-ingress
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: mysqldb.localhost
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: mysqldb-adminer-service
+            port:
+              number: 8080
